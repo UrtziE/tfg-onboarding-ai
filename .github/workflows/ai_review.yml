@@ -1,0 +1,54 @@
+name: AI Onboarding Reviewer
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths-ignore:
+      - 'historial/**'
+      - 'reglas/**'
+      - 'prompts/**'
+      - '.github/**'
+  pull_request:
+    types: [opened, synchronize]
+    paths-ignore:
+      - 'historial/**'
+      - 'reglas/**'
+      - 'prompts/**'
+      - '.github/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  revisar-codigo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar revisor con IA
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python src/reviewer.py
+
+      - name: Guardar historial actualizado en el repositorio
+        run: |
+          git config user.name "Onboarding Bot"
+          git config user.email "bot@noreply.github.com"
+          git add historial/evolucion_junior.json
+          git commit -m "Actualizar historial de evolución [skip-ai]" || exit 0
+          git push
